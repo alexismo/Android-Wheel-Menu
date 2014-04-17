@@ -26,6 +26,7 @@ public class WheelMenu extends ImageView {
     // wheel to the center of a div or not
     private Context context;
     private WheelChangeListener wheelChangeListener;
+    private WheelMoveListener wheelMoveListener;
 
     public WheelMenu(Context context, AttributeSet attrs) {
         super(context, attrs);
@@ -56,6 +57,15 @@ public class WheelMenu extends ImageView {
      */
     public void setWheelChangeListener(WheelChangeListener wheelChangeListener) {
         this.wheelChangeListener = wheelChangeListener;
+    }
+    
+    /**
+     * Add a new listener to observe user wheel movement.
+     *
+     * @param wheelMoveListener
+     */
+    public void setWheelMoveListener(WheelMoveListener wheelMoveListener) {
+        this.wheelMoveListener = wheelMoveListener;
     }
 
     /**
@@ -128,6 +138,7 @@ public class WheelMenu extends ImageView {
         if (wheelHeight == 0 || wheelWidth == 0) {
             wheelHeight = h;
             wheelWidth = w;
+            
             // resize the image
             Matrix resize = new Matrix();
             resize.postScale((float) Math.min(wheelWidth, wheelHeight) / (float) imageOriginal
@@ -202,6 +213,15 @@ public class WheelMenu extends ImageView {
          */
         public void onSelectionChange(int selectedPosition);
     }
+    
+    public interface WheelMoveListener {
+    	/**
+         * Called when the user moves the wheel
+         * 
+         * @param currentPosition the position currently passing by the selection pointer
+         */
+        public void onWheelMove(int currentPosition);
+    }
 
     //listener for touch events on the wheel
     private class WheelTouchListener implements View.OnTouchListener {
@@ -226,55 +246,65 @@ public class WheelMenu extends ImageView {
 
                     //current angle becomes start angle for the next motion
                     startAngle = currentAngle;
+                    
+                    if (wheelMoveListener != null) {
+                    	wheelMoveListener.onWheelMove(currentPosition());
+                    }
                     break;
 
 
                 case MotionEvent.ACTION_UP:
-                    //get the total angle rotated in 360 degrees
-                    totalRotation = totalRotation % 360;
-
-                    //represent total rotation in positive value
-                    if (totalRotation < 0) {
-                        totalRotation = 360 + totalRotation;
-                    }
-
-                    //calculate the no of divs the rotation has crossed
-                    int no_of_divs_crossed = (int) ((totalRotation) / divAngle);
-
-                    //calculate current top
-                    top = (divCount + top - no_of_divs_crossed) % divCount;
-
-                    //for next rotation, the initial total rotation will be the no of degrees
-                    // inside the current top
-                    totalRotation = totalRotation % divAngle;
-
-                    //snapping to the top's center
-                    if (snapToCenterFlag) {
-
-                        //calculate the angle to be rotated to reach the top's center.
-                        double leftover = divAngle / 2 - totalRotation;
-
-                        rotateWheel((float) (leftover));
-
-                        //re-initialize total rotation
-                        totalRotation = divAngle / 2;
-                    }
-
-                    //set the currently selected option
-                    if (top == 0) {
-                        selectedPosition = divCount - 1;//loop around the array
-                    } else {
-                        selectedPosition = top - 1;
-                    }
+                    
 
                     if (wheelChangeListener != null) {
-                        wheelChangeListener.onSelectionChange(selectedPosition);
+                        wheelChangeListener.onSelectionChange(currentPosition());
                     }
 
                     break;
             }
 
             return true;
+        }
+        
+        private int currentPosition(){
+        	//get the total angle rotated in 360 degrees
+            totalRotation = totalRotation % 360;
+
+            //represent total rotation in positive value
+            if (totalRotation < 0) {
+                totalRotation = 360 + totalRotation;
+            }
+
+            //calculate the no of divs the rotation has crossed
+            int no_of_divs_crossed = (int) ((totalRotation) / divAngle);
+
+            //calculate current top
+            top = (divCount + top - no_of_divs_crossed) % divCount;
+
+            //for next rotation, the initial total rotation will be the no of degrees
+            // inside the current top
+            totalRotation = totalRotation % divAngle;
+
+            //snapping to the top's center
+            if (snapToCenterFlag) {
+
+                //calculate the angle to be rotated to reach the top's center.
+                double leftover = divAngle / 2 - totalRotation;
+
+                rotateWheel((float) (leftover));
+
+                //re-initialize total rotation
+                totalRotation = divAngle / 2;
+            }
+
+            //set the currently selected option
+            if (top == 0) {
+                selectedPosition = divCount - 1;//loop around the array
+            } else {
+                selectedPosition = top - 1;
+            }
+            
+            return selectedPosition;
         }
     }
 
